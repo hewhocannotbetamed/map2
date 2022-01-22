@@ -2,6 +2,7 @@ use pyo3::prelude::*;
 use signal_hook::{consts::SIGINT, iterator::Signals};
 
 use crate::*;
+use crate::multiplexer::Multiplexer;
 use crate::parsing::key_action::*;
 use crate::reader::*;
 use crate::window::Window;
@@ -184,6 +185,8 @@ fn map2(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(exit, m)?)?;
     m.add_class::<Reader>()?;
     m.add_class::<Writer>()?;
+    m.add_class::<Multiplexer>()?;
+    m.add_class::<EventRoute>()?;
     m.add_class::<Window>()?;
 
     Ok(())

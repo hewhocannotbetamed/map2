@@ -10,7 +10,18 @@ use crate::*;
 use crate::parsing::key_action::*;
 use crate::parsing::python::*;
 use crate::python::*;
-use crate::reader::Reader;
+use crate::reader::{Reader, RoutableObj};
+
+pub trait EventRoutable {
+    fn route(&mut self) -> Result<mpsc::Receiver<InputEvent>>;
+}
+
+#[pyclass]
+pub struct EventRoute {}
+
+impl EventRoutable for EventRoute {
+    fn route(&mut self) -> Result<mpsc::Receiver<InputEvent>> { panic!("") }
+}
 
 #[pyclass]
 pub struct Writer {
@@ -24,7 +35,7 @@ pub struct Writer {
 impl Writer {
     #[new]
     #[args(kwargs = "**")]
-    pub fn new(input: &mut Reader, kwargs: Option<&PyDict>) -> PyResult<Self> {
+    pub fn new(input: PyAny, kwargs: Option<&PyDict>) -> PyResult<Self> {
         let options: HashMap<&str, &PyAny> = match kwargs {
             Some(py_dict) => py_dict.extract()
                 .map_err(|_| PyTypeError::new_err("the options object must be a dict"))?,
@@ -38,8 +49,9 @@ impl Writer {
         };
 
 
-        let ev_rx = input.route()
-            .map_err(|err| PyTypeError::new_err(err.to_string()))?;
+        let ev_rx = &input.call_method0("route")
+            .map_err(|err| PyTypeError::new_err(err.to_string()))?
+            .extract::<RoutableObj>().unwrap().inner.unwrap();
 
         let (exit_tx, exit_rx) = oneshot::channel();
         let (message_tx, message_rx) = std::sync::mpsc::channel();

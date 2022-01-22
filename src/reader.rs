@@ -5,14 +5,32 @@ use ::oneshot;
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict};
+use writer::EventRoute;
 
 use crate::*;
+use crate::writer::EventRoutable;
 
 #[pyclass]
 pub struct Reader {
     exit_tx: Option<oneshot::Sender<()>>,
     thread_handle: Option<std::thread::JoinHandle<Result<()>>>,
     ev_rx: Option<mpsc::Receiver<InputEvent>>,
+}
+
+
+#[pyclass]
+pub struct RoutableObj {
+    pub(crate) inner: Result<mpsc::Receiver<InputEvent>>,
+}
+
+impl FromPyObject<'a> for RoutableObj {
+    fn extract(ob: &'a PyAny) -> PyResult<Self> {
+        if let Ok(foo) = ob.downcast_ref::<RoutableObj>() {
+            Ok(PyMap(dict.items().extract::<Vec<(K, V)>>()?.into_iter().collect::<HashMap<_,_>>()))
+        } else {
+            panic!();
+        }
+    }
 }
 
 
@@ -38,23 +56,21 @@ impl Reader {
             .map_err(|err| PyTypeError::new_err(err.to_string()))?;
 
         let handle = Self {
-            exit_tx : Some(exit_tx),
+            exit_tx: Some(exit_tx),
             thread_handle: Some(thread_handle),
             ev_rx: Some(ev_rx),
         };
 
         Ok(handle)
     }
-}
 
-impl Reader {
-    pub fn route(&mut self) -> Result<mpsc::Receiver<InputEvent>> {
+    fn route(&mut self) -> RoutableObj {
         if self.ev_rx.is_none() {
-            return Err(anyhow!("reader is already bound to an output, multiplexing is not allowed."));
+            return RoutableObj { inner: Err(anyhow!("reader is already bound to an output, multiplexing is not allowed.")) };
         }
         let mut reader = None;
         mem::swap(&mut reader, &mut self.ev_rx);
-        Ok(reader.unwrap())
+        RoutableObj { inner: Ok(reader.unwrap()) }
     }
 }
 

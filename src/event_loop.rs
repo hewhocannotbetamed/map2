@@ -1,10 +1,7 @@
 use std::thread;
-use std::thread::Thread;
 
-use pyo3::{Py, PyAny, PyObject, PyResult, Python};
+use pyo3::{Py, PyAny, Python};
 use pyo3::types::PyBool;
-
-use crate::*;
 
 pub struct EventLoop {
     thread_handle: Option<std::thread::JoinHandle<()>>,
